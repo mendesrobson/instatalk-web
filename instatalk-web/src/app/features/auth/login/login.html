@@ -1,0 +1,29 @@
+<div class="login-container">
+  <h2>Entrar no InstaTalk</h2>
+
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+    <div class="form-group">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" formControlName="email" placeholder="seu@email.com">
+    </div>
+
+    <div class="form-group">
+      <label for="password">Senha</label>
+      <input id="password" type="password" formControlName="password" placeholder="******">
+    </div>
+
+    <div class="form-group" style="position: absolute; left: -9999px; opacity: 0;" aria-hidden="true">
+      <label for="website">Website (Não preencha)</label>
+      <input id="website" type="text" formControlName="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    @if (errorMessage) {
+      <div class="error-msg" style="color: red; margin-bottom: 10px;">
+        {{ errorMessage }}
+      </div>
+    }
+
+    <button type="submit" [disabled]="loginForm.invalid">Entrar</button>
+  </form>
+</div>

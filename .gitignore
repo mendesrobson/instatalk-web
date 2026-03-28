@@ -1,0 +1,60 @@
+# ==========================================
+# 1. DEPENDÊNCIAS (Node.js)
+# Nunca commite as dependências. Elas devem ser geradas no CI/CD.
+# ==========================================
+/node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+*package-lock.json* # Opcional: Remova o '#' se quiser forçar o uso do yarn.lock apenas
+
+# ==========================================
+# 2. ARQUIVOS DE AMBIENTE & SEGURANÇA (CRÍTICO)
+# Protege contra vazamento acidental de chaves, senhas e tokens.
+# ==========================================
+.env
+.env.*
+!.env.example # Permite commitar um arquivo de exemplo vazio para documentação
+*.pem
+*.key
+*.cert
+*.pfx
+
+# ==========================================
+# 3. COMPILAÇÃO & CACHE DO ANGULAR
+# Previne que o repositório fique inchado com o código transpilado.
+# ==========================================
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/.angular
+
+# ==========================================
+# 4. TESTES E COBERTURA
+# ==========================================
+/coverage
+/e2e/screenshots
+/e2e/videos
+
+# ==========================================
+# 5. CONFIGURAÇÕES DE IDE E SO
+# Esconde a sua topologia de desenvolvimento local.
+# ==========================================
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
+node_modules.zip
