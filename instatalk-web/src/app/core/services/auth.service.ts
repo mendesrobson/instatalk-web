@@ -27,6 +27,7 @@ export class AuthService {
   }
 
   login(credentials: any) {
+    console.log('Attempting login with credentials:', credentials);
     return this.http.post<any>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
         if (this.isBrowser) {
