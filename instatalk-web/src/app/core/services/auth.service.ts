@@ -27,12 +27,13 @@ export class AuthService {
   }
 
   login(credentials: any) {
-    console.log('Attempting login with credentials:', credentials);
     return this.http.post<any>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
         if (this.isBrowser) {
           localStorage.setItem('access_token', response.accessToken);
           localStorage.setItem('refresh_token', response.refreshToken);
+          localStorage.setItem('user_email', credentials.email);
+
           this.isAuthenticated.set(true);
         }
         this.router.navigate(['/feed']);
@@ -47,10 +48,12 @@ export class AuthService {
     });
   }
 
-  private clearLocalSession() {
+private clearLocalSession() {
     if (this.isBrowser) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      // Limpamos o e-mail quando a sessão morre ou o usuário desloga
+      localStorage.removeItem('user_email');
       this.isAuthenticated.set(false);
     }
     this.router.navigate(['/login']);
@@ -65,5 +68,42 @@ export class AuthService {
 
   private hasToken(): boolean {
     return !!this.getToken();
+  }
+
+  refreshToken() {
+      let rToken = null;
+      let userEmail = null;
+
+      // Buscamos o token E o e-mail do storage
+      if (this.isBrowser) {
+        rToken = localStorage.getItem('refresh_token');
+        userEmail = localStorage.getItem('user_email');
+      }
+
+      if (!rToken) {
+        this.clearLocalSession();
+        throw new Error('No refresh token available');
+      }
+
+      // Enviamos os dois juntos no payload (rToken e userEmail)
+      return this.http.post<any>(`${this.apiUrl}/refresh`, {
+        refreshToken: rToken,
+        email: userEmail
+      }).pipe(
+        tap(response => {
+          if (this.isBrowser) {
+            localStorage.setItem('access_token', response.accessToken);
+            localStorage.setItem('refresh_token', response.refreshToken);
+          }
+        })
+      );
+    }
+
+  // Helper para salvar os tokens externamente (usado pelo Interceptor)
+  updateTokens(accessToken: string, refreshToken: string) {
+    if (this.isBrowser) {
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
+    }
   }
 }

@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PostService, Post } from '../../core/services/post';
 import { DatePipe, NgClass } from '@angular/common';
@@ -12,6 +13,7 @@ import { DatePipe, NgClass } from '@angular/common';
 export class Feed implements OnInit {
   private postService = inject(PostService);
   private fb = inject(FormBuilder);
+  private platformId = inject(PLATFORM_ID);
 
   // A base URL do backend para renderizar as imagens estáticas
   readonly apiBaseUrl = 'http://localhost:5027';
@@ -28,7 +30,9 @@ export class Feed implements OnInit {
   });
 
   ngOnInit() {
-    this.loadFeed();
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadFeed();
+    }
   }
 
   loadFeed() {
