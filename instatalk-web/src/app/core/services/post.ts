@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-// Interface tipada para garantir que o Frontend saiba o que esperar da API
+// Adicionada a propriedade commentsCount
 export interface Post {
   id: string;
   ownerId: string;
@@ -11,6 +11,15 @@ export interface Post {
   createdAt: string;
   likesCount: number;
   hasLiked: boolean;
+  commentsCount: number;
+}
+
+// NOVO: Interface para os comentários
+export interface PostComment {
+  id: string;
+  userId: string;
+  content: string;
+  createdAt: string;
 }
 
 @Injectable({
@@ -18,27 +27,32 @@ export interface Post {
 })
 export class PostService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:5027/api/v1'; // Ajuste a porta se necessário
+  private apiUrl = 'http://localhost:5027/api/v1';
 
-  // 1. Busca o Feed
   getFeed(): Observable<Post[]> {
     return this.http.get<Post[]>(`${this.apiUrl}/posts`);
   }
 
-  // 2. Upload de Imagem (Staging)
   uploadImage(file: File): Observable<{ url: string }> {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<{ url: string }>(`${this.apiUrl}/uploads/image`, formData);
   }
 
-  // 3. Criação do Post (Commit)
   createPost(content: string, imageUrl?: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/posts`, { content, imageUrl });
   }
 
-  // 4. Toggle Like
   toggleLike(postId: string): Observable<{ action: string }> {
     return this.http.post<{ action: string }>(`${this.apiUrl}/posts/${postId}/like`, {});
+  }
+
+  // --- NOVOS MÉTODOS DE COMENTÁRIOS ---
+  getComments(postId: string): Observable<PostComment[]> {
+    return this.http.get<PostComment[]>(`${this.apiUrl}/posts/${postId}/comments`);
+  }
+
+  addComment(postId: string, content: string): Observable<PostComment> {
+    return this.http.post<PostComment>(`${this.apiUrl}/posts/${postId}/comments`, { content });
   }
 }

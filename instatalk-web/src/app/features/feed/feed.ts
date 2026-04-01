@@ -1,8 +1,11 @@
 import { Component, inject, OnInit, signal, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { isPlatformBrowser, DatePipe } from '@angular/common';
+// Adicione o FormControl aos imports do ReactiveFormsModule
+import { FormBuilder, ReactiveFormsModule, Validators, FormControl } from '@angular/forms';
 import { PostService, Post } from '../../core/services/post';
-import { DatePipe, NgClass } from '@angular/common';
+import { UserService, UserSearchResult } from '../../core/services/user';
+// Importes do RxJS para a busca inteligente
+import { debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 
 @Component({
   selector: 'app-feed',
@@ -14,12 +17,23 @@ export class Feed implements OnInit {
   private postService = inject(PostService);
   private fb = inject(FormBuilder);
   private platformId = inject(PLATFORM_ID);
+  private userService = inject(UserService);
 
   // A base URL do backend para renderizar as imagens estáticas
   readonly apiBaseUrl = 'http://localhost:5027';
 
   posts = signal<Post[]>([]);
   errorMessage = signal<string>('');
+  // Variáveis da Barra de Busca
+  searchControl = new FormControl('');
+  searchResults = signal<UserSearchResult[]>([]);
+  isSearching = signal<boolean>(false);
+
+  // Dicionário para controlar se a aba de comentários está aberta: { 'id-do-post': true }
+  expandedComments = signal<Record<string, boolean>>({});
+
+  // Dicionário para guardar os comentários cacheados: { 'id-do-post': [comentarios...] }
+  postComments = signal<Record<string, any[]>>({});
 
   // Controle do arquivo selecionado
   selectedFile: File | null = null;
@@ -32,7 +46,48 @@ export class Feed implements OnInit {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.loadFeed();
+      this.setupSearch();
     }
+  }
+
+  private setupSearch() {
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300), // Espera o usuário parar de digitar por 300ms
+      distinctUntilChanged(), // Só busca se o texto realmente mudou
+      switchMap(query => {
+        if (!query || query.trim().length < 2) {
+          this.searchResults.set([]);
+          return of([]); // Retorna um array vazio (cancela a busca)
+        }
+        this.isSearching.set(true);
+        return this.userService.searchUsers(query);
+      })
+    ).subscribe({
+      next: (results) => {
+        this.searchResults.set(results);
+        this.isSearching.set(false);
+      },
+      error: () => {
+        this.searchResults.set([]);
+        this.isSearching.set(false);
+      }
+    });
+  }
+
+  // Método do Botão Seguir (Optimistic UI)
+  toggleFollowUser(user: UserSearchResult) {
+    const previousState = user.isFollowing;
+    user.isFollowing = !user.isFollowing; // Muda a UI instantaneamente
+
+    this.userService.toggleFollow(user.id).subscribe({
+      next: () => {
+        // Sucesso silencioso
+      },
+      error: () => {
+        user.isFollowing = previousState; // Rollback em caso de falha
+        alert('Erro ao processar a ação de seguir.');
+      }
+    });
   }
 
   loadFeed() {
@@ -101,6 +156,42 @@ export class Feed implements OnInit {
           console.warn('Você está curtindo rápido demais!');
         }
       }
+    });
+  }
+
+  toggleComments(postId: string) {
+    const currentExpanded = this.expandedComments();
+    const isExpanded = !currentExpanded[postId];
+
+    // Se abriu e ainda não tem cache dos comentários, busca na API
+    if (isExpanded && !this.postComments()[postId]) {
+      this.postService.getComments(postId).subscribe({
+        next: (comments) => {
+          this.postComments.set({ ...this.postComments(), [postId]: comments });
+        },
+        error: () => console.error('Erro ao buscar comentários')
+      });
+    }
+  }
+
+  // Método para enviar comentário (Usamos a referência do input HTML direto para máxima performance)
+  submitComment(post: Post, inputElement: HTMLInputElement) {
+    const content = inputElement.value.trim();
+    if (!content) return;
+
+    this.postService.addComment(post.id, content).subscribe({
+      next: (newComment) => {
+        // 1. Atualiza a lista de comentários daquele post (Optimistic UI)
+        const currentComments = this.postComments()[post.id] || [];
+        this.postComments.set({ ...this.postComments(), [post.id]: [...currentComments, newComment] });
+
+        // 2. Aumenta o contador do post
+        post.commentsCount = (post.commentsCount || 0) + 1;
+
+        // 3. Limpa o input
+        inputElement.value = '';
+      },
+      error: () => alert('Erro ao enviar comentário.')
     });
   }
 }
